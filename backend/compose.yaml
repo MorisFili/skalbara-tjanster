@@ -1,12 +1,12 @@
 services:
 
   db:
-    image: postgres:17
+    image: postgres:18
 
     environment:
-      POSTGRES_DB: booking
-      POSTGRES_USER: bookinguser
-      POSTGRES_PASSWORD: bookingpassword
+      POSTGRES_DB: ${DB_NAME:?Set DB_NAME in server.env}
+      POSTGRES_USER: ${DB_USER:?Set DB_USER in server.env}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in server.env}
 
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -16,7 +16,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -U bookinguser -d booking"
+          "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""
         ]
       interval: 5s
       timeout: 5s
@@ -26,15 +26,14 @@ services:
   api1:
     build: .
 
+    env_file: server.env
+
     environment:
       PORT: 3000
       INSTANCE_NAME: api1
 
       DB_HOST: db
       DB_PORT: 5432
-      DB_NAME: booking
-      DB_USER: bookinguser
-      DB_PASSWORD: bookingpassword
 
     depends_on:
       db:
@@ -44,15 +43,14 @@ services:
   api2:
     build: .
 
+    env_file: server.env
+
     environment:
       PORT: 3000
       INSTANCE_NAME: api2
 
       DB_HOST: db
       DB_PORT: 5432
-      DB_NAME: booking
-      DB_USER: bookinguser
-      DB_PASSWORD: bookingpassword
 
     depends_on:
       db:
@@ -62,15 +60,14 @@ services:
   api3:
     build: .
 
+    env_file: server.env
+
     environment:
       PORT: 3000
       INSTANCE_NAME: api3
 
       DB_HOST: db
       DB_PORT: 5432
-      DB_NAME: booking
-      DB_USER: bookinguser
-      DB_PASSWORD: bookingpassword
 
     depends_on:
       db:
