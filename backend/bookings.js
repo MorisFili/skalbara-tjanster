@@ -1,108 +1,59 @@
-import {pool} from "./db.js";
+import {pool} from "./db.js"
 
-const allowedStatuses = [
-    "PENDING",
-    "CONFIRMED",
-    "CANCELLED"
-];
+const allowedStatuses = ["PENDING", "CONFIRMED", "CANCELLED"]
 
 function validateBooking(req, res, next) {
-    const body = req.body;
-    if (body === undefined || body === null) {
-        return res.status(400).json({message: "A booking object is required."});
+    const body = req.body
+
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+        return res.status(400).json({message: "A booking object is required."})
     }
 
-    if (typeof body !== "object" || Array.isArray(body)) {
-        return res.status(400).json({message: "A booking object is required."});
+    if (typeof body.name !== "string" || body.name.trim() === "") {
+        return res.status(400).json({message: "Name is required and must be text."})
     }
 
-    const name = body.name;
-    const email = body.email;
-    const dateTime = body.date_time;
-    const numberOfPeople = body.number_of_people;
-    let status = body.status;
-
-    if (typeof name !== "string") {
-        return res.status(400).json({message: "Name must be text."});
-    }
-    if (name.trim() === "") {
-        return res.status(400).json({message: "Name is required."});
-    }
-    if (Array.from(name).length > 100) {
-        return res.status(400).json({message: "Name cannot be longer than 100 characters."});
+    if (typeof body.email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) {
+        return res.status(400).json({message: "A valid email address is required."})
     }
 
-    if (typeof email !== "string") {
-        return res.status(400).json({message: "Email must be text."});
-    }
-    if (email.length > 255) {
-        return res.status(400).json({message: "Email cannot be longer than 255 characters."});
-    }
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (emailPattern.test(email) === false) {
-        return res.status(400).json({message: "Email must contain a name, @, and a domain."});
+    if (typeof body.date_time !== "string" || Number.isNaN(Date.parse(body.date_time))) {
+        return res.status(400).json({message: "A valid date and time are required."})
     }
 
-    if (typeof dateTime !== "string" || dateTime.trim() === "") {
-        return res.status(400).json({message: "Date and time are required as text."});
-    }
-    const parsedDate = Date.parse(dateTime);
-    if (Number.isFinite(parsedDate) === false) {
-        return res.status(400).json({message: "Date and time are invalid."});
+    if (!Number.isInteger(body.number_of_people) || body.number_of_people < 1) {
+        return res.status(400).json({message: "Number of people must be a positive whole number."})
     }
 
-    if (Number.isInteger(numberOfPeople) === false) {
-        return res.status(400).json({message: "Number of people must be a whole number."});
-    }
-    if (numberOfPeople < 1) {
-        return res.status(400).json({message: "Number of people must be at least 1."});
-    }
-    if (numberOfPeople > 2147483647) {
-        return res.status(400).json({message: "Number of people is too large."});
+    if (req.method === "POST" && body.status === undefined) {
+        body.status = "PENDING"
     }
 
-    if (req.method === "POST" && status === undefined) {
-        status = "PENDING";
+    if (!allowedStatuses.includes(body.status)) {
+        return res.status(400).json({message: "Invalid booking status."})
     }
-    if (allowedStatuses.includes(status) === false) {
-        return res.status(400).json({message: "Invalid booking status."});
-    }
-    next();
+
+    next()
 }
 
 function bookingError(error, res) {
-    const code = error.code || "";
-    const isDataError = code.startsWith("22");
-    const isConstraintError = code.startsWith("23");
-    if (isDataError || isConstraintError) {
-        return res.status(400).json({message: "Invalid booking data."});
+    const code = error.code || ""
+    if (code.startsWith("22") || code.startsWith("23")) {
+        return res.status(400).json({message: "Invalid booking data."})
     }
-    console.error(error);
-    return res.status(500).json({message: "Server error."});
+    console.error(error)
+    return res.status(500).json({message: "Server error."})
 }
 
-export default function (server, path) {
-    path += "/bookings";
+export default function (server) {
+    const path = "/bookings"
 
     server.param("id", (req, res, next, id) => {
-        if (id.length > 19 || id.startsWith("0")) {
-            return res.status(400).json({message: "Booking ID must be a positive whole number within the database limit."});
+        if (!/^[1-9]\d*$/.test(id)) {
+            return res.status(400).json({message: "Booking ID must be a positive whole number."})
         }
-
-        for (const character of id) {
-            if (character < "0" || character > "9") {
-                return res.status(400).json({message: "Booking ID must contain only digits."});
-            }
-        }
-
-        const bookingId = BigInt(id);
-        const largestDatabaseId = 9223372036854775807n;
-        if (bookingId > largestDatabaseId) {
-            return res.status(400).json({message: "Booking ID is too large."});
-        }
-        next();
-    });
-
+        next()
+    })
 
     server.get(path, async (req, res) => {
         try {
@@ -110,20 +61,18 @@ export default function (server, path) {
                 SELECT *
                 FROM bookings
                 ORDER BY id
-            `);
+            `)
 
-            res.status(200).json(result.rows);
+            res.status(200).json(result.rows)
 
         } catch (error) {
-            bookingError(error, res);
+            bookingError(error, res)
         }
-    });
+    })
 
-
-    // GET ONE
     server.get(`${path}/:id`, async (req, res) => {
         try {
-            const id = req.params.id;
+            const id = req.params.id
 
             const result = await pool.query(
                 `
@@ -132,23 +81,21 @@ export default function (server, path) {
                     WHERE id = $1
                 `,
                 [id]
-            );
+            )
 
             if (result.rows.length === 0) {
                 return res.status(404).json({
                     message: "Booking not found."
-                });
+                })
             }
 
-            res.status(200).json(result.rows[0]);
+            res.status(200).json(result.rows[0])
 
         } catch (error) {
-            bookingError(error, res);
+            bookingError(error, res)
         }
-    });
+    })
 
-
-    // CREATE
     server.post(path, validateBooking, async (req, res) => {
         try {
             const {
@@ -156,8 +103,8 @@ export default function (server, path) {
                 email,
                 date_time,
                 number_of_people,
-                status = "PENDING"
-            } = req.body;
+                status
+            } = req.body
 
             const result = await pool.query(
                 `
@@ -178,20 +125,18 @@ export default function (server, path) {
                     number_of_people,
                     status
                 ]
-            );
+            )
 
-            res.status(201).json(result.rows[0]);
+            res.status(201).json(result.rows[0])
 
         } catch (error) {
-            bookingError(error, res);
+            bookingError(error, res)
         }
-    });
-
-
+    })
 
     server.put(`${path}/:id`, validateBooking, async (req, res) => {
         try {
-            const id = req.params.id;
+            const id = req.params.id
 
             const {
                 name,
@@ -199,7 +144,7 @@ export default function (server, path) {
                 date_time,
                 number_of_people,
                 status
-            } = req.body;
+            } = req.body
 
             const result = await pool.query(
                 `
@@ -224,26 +169,24 @@ export default function (server, path) {
                     status,
                     id
                 ]
-            );
+            )
 
             if (result.rows.length === 0) {
                 return res.status(404).json({
                     message: "Booking not found."
-                });
+                })
             }
 
-            res.status(200).json(result.rows[0]);
+            res.status(200).json(result.rows[0])
 
         } catch (error) {
-            bookingError(error, res);
+            bookingError(error, res)
         }
-    });
-
-
+    })
 
     server.delete(`${path}/:id`, async (req, res) => {
         try {
-            const id = req.params.id;
+            const id = req.params.id
 
             const result = await pool.query(
                 `
@@ -252,18 +195,18 @@ export default function (server, path) {
                     RETURNING id
                 `,
                 [id]
-            );
+            )
 
             if (result.rows.length === 0) {
                 return res.status(404).json({
                     message: "Booking not found."
-                });
+                })
             }
 
-            res.status(204).send();
+            res.status(204).send()
 
         } catch (error) {
-            bookingError(error, res);
+            bookingError(error, res)
         }
-    });
+    })
 }
