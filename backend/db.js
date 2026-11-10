@@ -1,7 +1,7 @@
-import {Pool} from "pg";
-import dotenv from "dotenv";
+import {Pool} from "pg"
+import dotenv from "dotenv"
 
-dotenv.config({path: new URL("./server.env", import.meta.url), quiet: true});
+dotenv.config({path: new URL("./server.env", import.meta.url), quiet: true})
 
 export const pool = new Pool({
     host: process.env.DB_HOST,
@@ -9,4 +9,4 @@ export const pool = new Pool({
     database: process.env.DB_NAME,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD
-});
+})
