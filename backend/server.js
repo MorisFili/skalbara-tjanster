@@ -1,6 +1,7 @@
 import bookings from "./bookings.js"
 
 import express from "express"
+import os from "node:os"
 
 import {pool} from "./db.js"
 
@@ -18,11 +19,9 @@ function routesRegister(server) {
         })
     })
 
-    server.get(`${path}/instance`, (req, res) => {
-        const instance = process.env.INSTANCE_NAME
-
+    server.get("/instance", (req, res) => {
         res.status(200).json({
-            instance
+            instance: os.hostname()
         })
     })
 
