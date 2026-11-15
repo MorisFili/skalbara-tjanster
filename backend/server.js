@@ -11,9 +11,8 @@ const PORT = process.env.PORT || 3000
 server.use(express.json())
 
 function routesRegister(server) {
-    const path = "/api"
 
-    server.get(`${path}/health`, (req, res) => {
+    server.get("/health", (req, res) => {
         res.status(200).json({
             status: "ok"
         })
