@@ -23,10 +23,10 @@ npm run start
 ```
 
 Endpoints:
-http://localhost:8080/bookings
-http://localhost:8080/bookings/{id}
-http://localhost:8080/instance
-http://localhost:8080/health
+* http://localhost:8080/bookings
+* http://localhost:8080/bookings/{id}
+* http://localhost:8080/instance
+* http://localhost:8080/health
 
 
 ## Verifiera
