@@ -1,32 +1,34 @@
-﻿## Starta
+## Starta
 
-Kräver Docker Desktop Node.js med npm. 
+Kräver Docker Desktop och Node.js med npm.
 Starta Docker Desktop. Navigera till /backend inne i projektet, från root:
 
 ```powershell
 cd backend
 ```
 
-Skapa en `server.env` enligt formatet från .env.example genom att kopiera över variablerna.
+Skapa `server.env` från `.env.example`:
 
+```powershell
+Copy-Item .env.example server.env
+```
+
+`DB_NAME`, `DB_USER` och `DB_PASSWORD` behövs i `server.env`. Docker Compose sätter `DB_HOST`, `DB_PORT` och `PORT` för backend-instanserna.
 
 Kör:
 ```powershell
 docker compose --env-file server.env up --build -d --wait
 ```
-för att skapa nödvändiga containrar med Docker Compose.
+Docker Compose startar PostgreSQL (`db`), tre backend-instanser (`api1`, `api2` och `api3`) och Nginx. Alla backend-instanser använder samma databas.
 
 ## Kör
 
-```powershell
-npm run start
-```
-
 Endpoints:
-* http://localhost:8080/bookings
-* http://localhost:8080/bookings/{id}
-* http://localhost:8080/instance
-* http://localhost:8080/health
+
+- http://localhost:8080/bookings
+- http://localhost:8080/bookings/{id}
+- http://localhost:8080/instance
+- http://localhost:8080/health
 
 
 ## Verifiera
@@ -46,6 +48,26 @@ Skriptet automatiserar och kontrollerar via compose:
 
 Varje kontroll skriver `PASS` eller `FAIL`. Vid fel avslutas skriptet med ett felmeddelande. 
 Endast skriptets egna bokningar tas bort. Volymerna bevaras och systemet lämnas igång.
+
+### Testa manuellt
+
+Anropa `GET /instance` flera gånger. Svaren ska visa `api1`, `api2` och `api3`.
+
+```powershell
+1..6 | ForEach-Object { (Invoke-RestMethod http://localhost:8080/instance).instance }
+```
+
+Stoppa `api2`:
+
+```powershell
+docker compose --env-file server.env stop api2
+```
+
+Anropa `GET /instance` flera gånger igen. Nu ska `api1` och `api3` svara. Starta sedan `api2` igen:
+
+```powershell
+docker compose --env-file server.env start api2
+```
 
 ## Stäng av
 
